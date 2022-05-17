@@ -16,8 +16,8 @@ private:
 
 public:
     int pop() {
-        int tmp = 0;
         q_locker.lock();
+        int tmp = 0;
 
         if (!q.empty()) {
             tmp = q.front();
@@ -34,27 +34,36 @@ public:
     };
 };
 
+std::mutex tmp;
+
 template <typename Iterator>
 void from_v_to_q(Iterator begin, Iterator end, SafeQueue& q)
 {
     for (auto it = begin; it != end; it++)
     {
+        tmp.lock();
         q.push(*it);
+        tmp.unlock();
     }
 }
 
 template <typename Iterator>
-void queue_fill(Iterator begin, Iterator end, int size)
+void queue_fill(Iterator begin, Iterator end, SafeQueue& q)
 {
     auto num_workers = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;
+    auto size = std::distance(begin, end);
     auto size_per_worker = size / num_workers;
+
     for (auto i = 0u; i < num_workers - 1; i++)
     {
-        threads.push_back(std::thread(from_v_to_q<Iterator>, 
+        threads.push_back(std::thread(from_v_to_q<Iterator>,
             std::next(begin, i * size_per_worker),
-            std::next(begin, (i + 1) * size_per_worker)));
+            std::next(begin, (i + 1) * size_per_worker),
+            std::ref(q)));
     }
+
+    from_v_to_q(std::next(begin, (num_workers - 1) * size_per_worker), end, std::ref(q));
 
     for (auto& thread : threads) {
         thread.join();
@@ -83,14 +92,14 @@ int main()
 
     SafeQueue q;
 
-    queue_fill(v.begin(), v.end(), v.size());
+    queue_fill(std::begin(v), std::end(v), q);
 
     std::vector<int> u;
 
-    from_q_to_u(u, q, 100);
+    from_q_to_u(u, q, v.size());
 
-    for (auto i : u)
-        std::cout << i << " ";
+    for (int i = 0u; i < u.size(); i++)
+        std::cout << u[i] << " ";
     std::cout << "\n";
 
     return 0;
