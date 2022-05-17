@@ -15,7 +15,8 @@ private:
     std::mutex q_locker;
 
 public:
-    int pop() {
+    int pop() 
+    {
         q_locker.lock();
         int tmp = 0;
 
@@ -27,23 +28,20 @@ public:
         return tmp;
     };
 
-    void push(int tmp) {
+    void push(int tmp) 
+    {
         q_locker.lock();
         q.push(tmp);
         q_locker.unlock();
     };
 };
 
-std::mutex tmp;
-
 template <typename Iterator>
 void from_v_to_q(Iterator begin, Iterator end, SafeQueue& q)
 {
     for (auto it = begin; it != end; it++)
     {
-        tmp.lock();
         q.push(*it);
-        tmp.unlock();
     }
 }
 
@@ -98,8 +96,12 @@ int main()
 
     from_q_to_u(u, q, v.size());
 
+    std::mutex tmp;
+
     for (int i = 0u; i < u.size(); i++)
+    {
         std::cout << u[i] << " ";
+    }
     std::cout << "\n";
 
     return 0;
